@@ -1,0 +1,47 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() { return request.auth != null; }
+    function owner(uid) { return signedIn() && request.auth.uid == uid; }
+
+    match /users/{uid} {
+      allow read, create, update: if owner(uid);
+      allow delete: if false;
+
+      match /settings/{doc} {
+        allow read, write: if owner(uid);
+      }
+
+      match /pages/{pageId} {
+        allow read, write: if owner(uid);
+      }
+
+      match /posts/{postId} {
+        allow read, create, update, delete: if owner(uid);
+      }
+
+      match /media/{mediaId} {
+        allow read, create, update, delete: if owner(uid);
+      }
+
+      match /activity/{activityId} {
+        allow read: if owner(uid);
+        allow write: if false;
+      }
+
+      // Facebook tokens are encrypted but still treated as server-only secrets.
+      match /pageSecrets/{pageId} {
+        allow read, write: if false;
+      }
+    }
+
+    // Server-only OAuth state.
+    match /oauthStates/{stateId} {
+      allow read, write: if false;
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
